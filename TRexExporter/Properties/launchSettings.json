@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TrexExporter": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
