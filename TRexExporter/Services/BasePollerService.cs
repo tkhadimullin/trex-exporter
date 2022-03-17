@@ -30,7 +30,7 @@ namespace TrexExporter.Services
 
         public abstract void InitialiseMetrics(MetricCollection metrics, string prefix);
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             Task.Run(async () => {
                 while (!cancellationToken.IsCancellationRequested && !_stopping)
@@ -42,17 +42,19 @@ namespace TrexExporter.Services
                         UpdateMetrics(_metrics, data, Prefix, Host);
                         Thread.Sleep(_configuration.GetValue<int>("pollInterval", 5000));
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // TODO: error handling
                     }
                 }
             });
+            return Task.CompletedTask;
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             _stopping = true;
+            return Task.CompletedTask;
         }
 
         public abstract void UpdateMetrics(MetricCollection metrics, TResponse data, string prefix, string host);

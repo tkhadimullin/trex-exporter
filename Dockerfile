@@ -8,10 +8,10 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 COPY . .
 RUN dotnet restore
-RUN dotnet build -c Release -o /app/build
+RUN dotnet build ./TRexExporter/TrexExporter.csproj -c Release -o /app/build -r linux-x64 --self-contained true
 
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish ./TRexExporter/TrexExporter.csproj -c Release -o /app/publish -r linux-x64 --self-contained true
 
 FROM base AS final
 WORKDIR /app
