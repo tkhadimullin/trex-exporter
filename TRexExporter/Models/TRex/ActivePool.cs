@@ -4,7 +4,7 @@
 
 using Newtonsoft.Json;
 
-namespace TrexExporter.Models
+namespace TrexExporter.Models.TRex
 {
     public partial class ActivePool
     {

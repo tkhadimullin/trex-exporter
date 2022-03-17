@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using Prometheus;
 using TrexExporter.Metadata;
 
-namespace TrexExporter.Models
+namespace TrexExporter.Models.TRex
 {
     [AddInstrumentation]
     public partial class TRexResponse

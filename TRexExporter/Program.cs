@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,7 +23,7 @@ namespace TrexExporter
                     configuration.Sources.Clear();
                     
                     configuration
-                        .AddEnvironmentVariables("TREX")
+                        .AddEnvironmentVariables("MININGSTATS")
                         .AddCommandLine(args);
                     
                 })
@@ -34,6 +32,7 @@ namespace TrexExporter
                     c.AddSingleton<MetricCollection>();
                     c.AddHostedService<PrometheusExporter>();
                     c.AddHostedService<TRexPoller>();
+                    c.AddHostedService<LolMinerPoller>();
                 })
                 .ConfigureLogging(c => c.AddConsole())
             ;

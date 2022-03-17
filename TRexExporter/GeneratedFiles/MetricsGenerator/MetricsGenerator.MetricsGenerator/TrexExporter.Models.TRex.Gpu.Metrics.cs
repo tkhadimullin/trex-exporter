@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using Prometheus; 
 
 
-namespace TrexExporter.Models { public partial class Gpu {
+namespace TrexExporter.Models.TRex { public partial class Gpu {
 
 public static Dictionary<string, Collector> GetMetrics(string prefix)
                 {
@@ -30,14 +30,14 @@ public static Dictionary<string, Collector> GetMetrics(string prefix)
                             return result;
                         }
 
-public static void UpdateMetrics(string prefix, Dictionary<string, Collector> metrics, Gpu data, string host, string slot, string algo, List<string> extraLabels = null) {
+public static void UpdateMetrics(string prefix, MetricCollection metrics, Gpu data, string host, string slot, string algo, List<string> extraLabels = null) {
 if(extraLabels == null) { 
                                     extraLabels = new List<string> {host, slot, algo};
                                 }
                                 else {
-                                    extraLabels.Insert(0, algo);
-                                    extraLabels.Insert(0, slot);
-                                    extraLabels.Insert(0, host);
+                                    extraLabels.Insert(0, algo.ToLowerInvariant());
+                                    extraLabels.Insert(0, slot.ToLowerInvariant());
+                                    extraLabels.Insert(0, host.ToLowerInvariant());
                                 }
 (metrics[$"{prefix}_gpus_hashrate"] as Gauge).WithLabels(extraLabels.ToArray()).Set(data.Hashrate);
 (metrics[$"{prefix}_gpus_hashrate_day"] as Gauge).WithLabels(extraLabels.ToArray()).Set(data.HashrateDay);

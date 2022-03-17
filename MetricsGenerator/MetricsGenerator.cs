@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System.Linq;
 
 namespace MetricsGenerator
 {
@@ -47,7 +48,7 @@ namespace MetricsGenerator
                 var fileDeclaration = namespaceDeclaration.Parent as CompilationUnitSyntax;
                 var usings = namespaceDeclaration.Usings.Union(fileDeclaration.Usings).Select(u => u.ToString()); // collect all usings. dont bother filtering for now
 
-                //Debugger.Launch();
+                //if(!Debugger.IsAttached) Debugger.Launch();
                 var text = usings.Aggregate(new StringBuilder(), (sb, s) => sb.AppendLine(s));
                 text.AppendLine()
                     .AppendLine("using System; ")
@@ -55,7 +56,8 @@ namespace MetricsGenerator
                     .AppendLine("using Prometheus; ")
                     .AppendLine();
 
-                text.AppendLine().AppendLine($"namespace {(classToProcess.Parent as NamespaceDeclarationSyntax).Name} {{ public partial class {classToProcess.Identifier} {{").AppendLine();
+                var ns = (classToProcess.Parent as NamespaceDeclarationSyntax).Name;
+                text.AppendLine().AppendLine($"namespace {ns} {{ public partial class {classToProcess.Identifier} {{").AppendLine();
 
                 
                 var properties = classToProcess.Members.Where(m => m.IsKind(SyntaxKind.PropertyDeclaration)
@@ -70,17 +72,17 @@ namespace MetricsGenerator
                 
                 if (!string.IsNullOrWhiteSpace(attrPrefix)) attrPrefix = $"_{attrPrefix}";
 
-                text.AppendLine(GetMetrics(properties, attrPrefix).ToString());
+                text.AppendLine(GetMetrics(properties, attrPrefix, context.Compilation).ToString());
 
-                text.AppendLine(UpdateMetrics(properties, classToProcess.Identifier, attrPrefix).ToString());
+                text.AppendLine(UpdateMetrics(properties, classToProcess.Identifier, attrPrefix, context.Compilation).ToString());
 
                 text.AppendLine("}}");
-                context.AddSource($"{classToProcess.Identifier}.Metrics.cs", SourceText.From(text.ToString(), Encoding.UTF8));
+                context.AddSource($"{ns}.{classToProcess.Identifier}.Metrics.cs", SourceText.From(text.ToString(), Encoding.UTF8));
 
             }
         }
 
-        private StringBuilder GetMetrics(List<MemberDeclarationSyntax> properties, string attrPrefix)
+        private StringBuilder GetMetrics(List<MemberDeclarationSyntax> properties, string attrPrefix, Compilation compilation)
         {
             var commonLabels = "\"host\", \"slot\", \"algo\"";
 
@@ -90,24 +92,27 @@ namespace MetricsGenerator
                     {").AppendLine();
             foreach (PropertyDeclarationSyntax p in properties)
             {
-                var jsonPropertyAttr = p.GetAttr("JsonProperty");
-                var metricAttr = p.GetAttr("Metric");
+                var semanticModel = compilation.GetSemanticModel(p.SyntaxTree);
+                var jsonPropertyAttr = p.GetAttr("JsonProperty", semanticModel);
+                var metricAttr = p.GetAttr("Metric", semanticModel);
 
                 if (metricAttr == null) continue;
 
-                var propName = jsonPropertyAttr.GetFirstParameterValue();
-                var metricName = metricAttr.GetFirstParameterValue();
-                if (metricAttr.ArgumentList.Arguments.Count > 1)
+                var metricType = metricAttr.GetParameterValue("type");
+                var propName = metricAttr.GetParameterValue("metricName") ??
+                    jsonPropertyAttr.GetParameterValue("propertyName");
+
+                if (metricAttr.HasParameterValues("labels") > 0)
                 {
-                    var labels = metricAttr.GetTailParameterValues();
+                    var labels = metricAttr.GetParameterValue("labels");
                     text.AppendLine(
-                        $"{{$\"{{prefix}}{attrPrefix}_{propName}\", Metrics.Create{metricName}($\"{{prefix}}{attrPrefix}_{propName}\", \"{propName}\", {commonLabels}, {labels}) }},");
+                        $"{{$\"{{prefix}}{attrPrefix}_{propName}\", Metrics.Create{metricType}($\"{{prefix}}{attrPrefix}_{propName}\", \"{propName}\", {commonLabels}, {labels}) }},");
 
                 }
                 else
                 {
                     text.AppendLine(
-                        $"{{$\"{{prefix}}{attrPrefix}_{propName}\", Metrics.Create{metricName}($\"{{prefix}}{attrPrefix}_{propName}\", \"{propName}\", {commonLabels}) }},");
+                        $"{{$\"{{prefix}}{attrPrefix}_{propName}\", Metrics.Create{metricType}($\"{{prefix}}{attrPrefix}_{propName}\", \"{propName}\", {commonLabels}) }},");
                 }
             }
             text.AppendLine(@"};
@@ -117,33 +122,37 @@ namespace MetricsGenerator
             return text;
         }
 
-        private StringBuilder UpdateMetrics(List<MemberDeclarationSyntax> properties, SyntaxToken classToProcess, string attrPrefix)
+        private StringBuilder UpdateMetrics(List<MemberDeclarationSyntax> properties, SyntaxToken classToProcess, string attrPrefix, Compilation compilation)
         {
-            var text = new StringBuilder($"public static void UpdateMetrics(string prefix, Dictionary<string, Collector> metrics, {classToProcess} data, string host, string slot, string algo, List<string> extraLabels = null) {{");
+            var text = new StringBuilder($"public static void UpdateMetrics(string prefix, MetricCollection metrics, {classToProcess} data, string host, string slot, string algo, List<string> extraLabels = null) {{");
             text.AppendLine();
             text.AppendLine(@"if(extraLabels == null) { 
                                     extraLabels = new List<string> {host, slot, algo};
                                 }
                                 else {
-                                    extraLabels.Insert(0, algo);
-                                    extraLabels.Insert(0, slot);
-                                    extraLabels.Insert(0, host);
+                                    extraLabels.Insert(0, algo.ToLowerInvariant());
+                                    extraLabels.Insert(0, slot.ToLowerInvariant());
+                                    extraLabels.Insert(0, host.ToLowerInvariant());
                                 }");
 
             foreach (PropertyDeclarationSyntax p in properties)
             {
-                var jsonPropertyAttr = p.GetAttr("JsonProperty");
-                var metricAttr = p.GetAttr("Metric");
+                var semanticModel = compilation.GetSemanticModel(p.SyntaxTree);
+
+                var jsonPropertyAttr = p.GetAttr("JsonProperty", semanticModel);
+                var metricAttr = p.GetAttr("Metric", semanticModel);
 
                 if (metricAttr == null) continue;
 
-                var propName = jsonPropertyAttr.GetFirstParameterValue();
-                var metricName = metricAttr.GetFirstParameterValue();
-                var newValue = $"data.{p.Identifier.ValueText}";
+                var metricType = metricAttr.GetParameterValue("type");
+                var propName = metricAttr.GetParameterValue("metricName") ?? jsonPropertyAttr.GetParameterValue("propertyName");
+                var newValue = metricAttr.GetParameterValue("valuePath") != null ? 
+                    $"data.{metricAttr.GetParameterValue("valuePath")}" 
+                    : $"data.{p.Identifier.ValueText}";
 
                 text.Append(
-                    $"(metrics[$\"{{prefix}}{attrPrefix}_{propName}\"] as {metricName}).WithLabels(extraLabels.ToArray())");
-                switch (metricName)
+                    $"(metrics[$\"{{prefix}}{attrPrefix}_{propName}\"] as {metricType}).WithLabels(extraLabels.ToArray())");
+                switch (metricType)
                 {
                     case "Counter": text.AppendLine($".IncTo({newValue});"); break;
                     case "Gauge": text.AppendLine($".Set({newValue});"); break;

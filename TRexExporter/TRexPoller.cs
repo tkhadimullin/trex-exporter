@@ -1,42 +1,62 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
-using TrexExporter.Models;
+using TrexExporter.Models.TRex;
+using TrexExporter.Services;
 
 namespace TrexExporter
 {
-    internal class TRexPoller : IHostedService
+    public class TRexPoller : BasePollerService<TRexResponse>
     {
-        private readonly IConfiguration _configuration;
-        private readonly MetricCollection _metrics;
-        private readonly HttpClient _client;
-        private bool _stopping;
+        public TRexPoller(IConfiguration configuration, MetricCollection metrics): base(configuration, metrics) {}
 
-        public TRexPoller(IConfiguration configuration, MetricCollection metrics)
+        protected override string PollUrl => "summary";
+        protected override string Prefix => _configuration.GetValue<string>("trexExporterPrefix", "");
+        protected override string Host => _configuration.GetValue<string>("trexBaseUrl", "http://127.0.0.1:4067");
+
+        public override void InitialiseMetrics(MetricCollection metrics, string prefix)
         {
-            _configuration = configuration;
-            _metrics = metrics;
-            _client = new HttpClient
-            {
-                BaseAddress = new Uri(configuration.GetValue<string>("baseUrl", "http://192.168.1.253:4067")),
-            };
+            foreach (var (key, value) in TRexResponse.GetMetrics(prefix)) metrics.TryAdd(key, value);
+            foreach (var (key, value) in DualStat.GetMetrics(prefix)) metrics.TryAdd(key, value);
+            foreach (var (key, value) in Gpu.GetMetrics(prefix)) metrics.TryAdd(key, value);
+            foreach (var (key, value) in Shares.GetMetrics(prefix)) metrics.TryAdd(key, value);
         }
-
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public override void UpdateMetrics(MetricCollection metrics, TRexResponse data, string prefix, string host)
         {
-            while (!_stopping)
+            TRexResponse.UpdateMetrics(prefix, metrics, data, host, "main", data.Algorithm);
+
+            foreach (var dataGpu in data.Gpus)
             {
-                var response = await _client.GetStringAsync("summary");
-                var data = JsonConvert.DeserializeObject<TRexResponse>(response);
-                _metrics.Update(data);
-                Thread.Sleep(_configuration.GetValue<int>("pollInterval", 5000));
+                Gpu.UpdateMetrics(prefix, metrics, dataGpu, host, "main", data.Algorithm, new List<string>
+                {
+                    dataGpu.DeviceId.ToString(),
+                    dataGpu.Vendor,
+                    dataGpu.Name
+                });
+                Shares.UpdateMetrics(prefix, metrics, dataGpu.Shares, host, "main", data.Algorithm, new List<string>
+                {
+                    dataGpu.GpuId.ToString(),
+                    dataGpu.Vendor,
+                    dataGpu.Name
+                });
+
+                if (data.DualStat != null)
+                {
+                    DualStat.UpdateMetrics(prefix, metrics, data.DualStat, host, "dual", data.DualStat.Algorithm);
+                    var dualStatGpu = data.DualStat.Gpus.Find(c => c.DeviceId == dataGpu.DeviceId);
+                    Gpu.UpdateMetrics(prefix, metrics, dualStatGpu, host, "dual", data.DualStat.Algorithm, new List<string>
+                    {
+                        dataGpu.DeviceId.ToString(),
+                        dataGpu.Vendor,
+                        dataGpu.Name
+                    });
+                    Shares.UpdateMetrics(prefix, metrics, dualStatGpu.Shares, host, "dual", data.DualStat.Algorithm, new List<string>
+                    {
+                        dataGpu.DeviceId.ToString(),
+                        dataGpu.Vendor,
+                        dataGpu.Name
+                    });
+                }
             }
         }
-
-        public async Task StopAsync(CancellationToken cancellationToken) => _stopping = true;
     }
 }

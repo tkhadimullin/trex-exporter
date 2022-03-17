@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using Prometheus; 
 
 
-namespace TrexExporter.Models { public partial class DualStat {
+namespace TrexExporter.Models.TRex { public partial class DualStat {
 
 public static Dictionary<string, Collector> GetMetrics(string prefix)
                 {
@@ -27,14 +27,14 @@ public static Dictionary<string, Collector> GetMetrics(string prefix)
                             return result;
                         }
 
-public static void UpdateMetrics(string prefix, Dictionary<string, Collector> metrics, DualStat data, string host, string slot, string algo, List<string> extraLabels = null) {
+public static void UpdateMetrics(string prefix, MetricCollection metrics, DualStat data, string host, string slot, string algo, List<string> extraLabels = null) {
 if(extraLabels == null) { 
                                     extraLabels = new List<string> {host, slot, algo};
                                 }
                                 else {
-                                    extraLabels.Insert(0, algo);
-                                    extraLabels.Insert(0, slot);
-                                    extraLabels.Insert(0, host);
+                                    extraLabels.Insert(0, algo.ToLowerInvariant());
+                                    extraLabels.Insert(0, slot.ToLowerInvariant());
+                                    extraLabels.Insert(0, host.ToLowerInvariant());
                                 }
 (metrics[$"{prefix}_dual_stat_accepted_count"] as Counter).WithLabels(extraLabels.ToArray()).IncTo(data.AcceptedCount);
 (metrics[$"{prefix}_dual_stat_hashrate"] as Gauge).WithLabels(extraLabels.ToArray()).Set(data.Hashrate);

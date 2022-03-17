@@ -8,8 +8,10 @@ namespace TrexExporter.Metadata
         {
         }
 
-        public MetricAttribute(string type, params string[] labels)
-        {
-        }
+        public MetricAttribute(string type, params string[] labels) { }
+
+        public MetricAttribute(string type, string metricName, params string[] labels) { }
+
+        public MetricAttribute(string type, string metricName, string valuePath, params string[] labels) { }
     }
 }

@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using TrexExporter.Metadata;
 
-namespace TrexExporter.Models
+namespace TrexExporter.Models.TRex
 {
     [AddInstrumentation("dual_stat")]
     public partial class DualStat

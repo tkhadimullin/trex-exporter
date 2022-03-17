@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace TrexExporter.Models
+namespace TrexExporter.Models.TRex
 {
     public partial class WatchdogStat
     {
@@ -22,7 +22,7 @@ namespace TrexExporter.Models
 
         [JsonProperty("built_in")]
         public bool BuiltIn { get; set; }
-        
+
         [JsonProperty("startup_ts")]
         public int StartupTs { get; set; }
 
