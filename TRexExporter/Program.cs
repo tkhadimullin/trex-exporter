@@ -8,7 +8,7 @@ namespace TrexExporter
 {
     class Program
     {
-        private static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
             using IHost host = CreateHostBuilder(args)
                 .Build();

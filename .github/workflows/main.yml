@@ -31,6 +31,5 @@ jobs:
       uses: docker/build-push-action@v2.10.0
       with:      
         push: true
-        file: TRexExporter/Dockerfile
         tags: wiseowls/trex-mining-stats-exporter:latest
         labels: $(date +%s)
