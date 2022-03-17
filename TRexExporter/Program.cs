@@ -23,7 +23,7 @@ namespace TrexExporter
                     configuration.Sources.Clear();
                     
                     configuration
-                        .AddEnvironmentVariables("MININGSTATS")
+                        .AddEnvironmentVariables("MININGSTATS_")
                         .AddCommandLine(args);
                     
                 })
