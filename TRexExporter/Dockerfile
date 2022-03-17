@@ -5,7 +5,7 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:3.1 AS build
 WORKDIR /src
-COPY ["TrexExporter/TrexExporter.csproj", "TrexExporter/"]
+COPY ["TRexExporter/TrexExporter.csproj", "TrexExporter/"]
 RUN dotnet restore "TrexExporter/TrexExporter.csproj"
 COPY . .
 WORKDIR "/src/TrexExporter"
