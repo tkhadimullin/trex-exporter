@@ -10,10 +10,10 @@ namespace TrexExporter
     {
         private readonly KestrelMetricServer _server;
 
-        public PrometheusExporter(IConfiguration configuration)
+        public PrometheusExporter(IConfiguration generalConfig)
         {
-            _server = new KestrelMetricServer(hostname: configuration.GetValue<string>("exporterHost", "localhost"), 
-                                              port: configuration.GetValue<int>("exporterPort", 8088)
+            _server = new KestrelMetricServer(hostname: generalConfig.GetValue<string>("exporterHost", "localhost"), 
+                                              port: generalConfig.GetValue<int>("exporterPort", 8088)
             );
         }
 

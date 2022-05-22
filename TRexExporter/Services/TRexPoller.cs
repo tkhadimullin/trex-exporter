@@ -1,17 +1,14 @@
-﻿using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using TrexExporter.Models.TRex;
-using TrexExporter.Services;
 
-namespace TrexExporter
+namespace TrexExporter.Services
 {
     public class TRexPoller : BasePollerService<TRexResponse>
     {
-        public TRexPoller(IConfiguration configuration, MetricCollection metrics): base(configuration, metrics) {}
+        public TRexPoller(Dictionary<string, object> minerConfig, IConfiguration config, MetricCollection metrics) : base(minerConfig, config, metrics) { }
 
         protected override string PollUrl => "summary";
-        protected override string Prefix => _configuration.GetValue<string>("trexExporterPrefix", "");
-        protected override string Host => _configuration.GetValue<string>("trexBaseUrl", "http://127.0.0.1:4067");
 
         public override void InitialiseMetrics(MetricCollection metrics, string prefix)
         {

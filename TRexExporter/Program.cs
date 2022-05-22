@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TrexExporter.Infrastructure;
 
 namespace TrexExporter
 {
@@ -21,18 +22,15 @@ namespace TrexExporter
                 .ConfigureAppConfiguration((configuration) =>
                 {
                     configuration.Sources.Clear();
-                    
                     configuration
                         .AddEnvironmentVariables("MININGSTATS_")
                         .AddCommandLine(args);
-                    
                 })
                 .ConfigureServices(c =>
                 {
                     c.AddSingleton<MetricCollection>();
                     c.AddHostedService<PrometheusExporter>();
-                    c.AddHostedService<TRexPoller>();
-                    c.AddHostedService<LolMinerPoller>();
+                    c.InstantiateMiningPollerServices("MINER_");
                 })
                 .ConfigureLogging(c => c.AddConsole())
             ;
