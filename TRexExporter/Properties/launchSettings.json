@@ -1,10 +1,20 @@
 {
   "profiles": {
     "TrexExporter": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "MINER_1_Type": "trex",
+        "MINER_1_ExporterPrefix": "miner",
+        "MINER_1_BaseUrl": "http://127.0.0.1:4067",
+        "MINER_2_Type": "trex",        
+        "MINER_2_ExporterPrefix": "miner",
+        "MINER_2_BaseUrl": "http://127.0.0.2:4067",
+        "MININGSTATS_exporterHost": "+"
+      }
     },
     "Docker": {
       "commandName": "Docker"
+
     }
   }
 }
